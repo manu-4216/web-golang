@@ -30,12 +30,13 @@ func main() {
 	http.HandleFunc("/", index)
 	http.HandleFunc("/signup", signup)
 	http.HandleFunc("/signin", signin)
+	http.HandleFunc("/logout", logout)
 	log.Fatal(http.ListenAndServe(":80", nil))
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
 	var u user
-	if hasSessionCookie(r) {
+	if hasPersistedSession(r) {
 		u = getSavedUser(r)
 	}
 	tpl.ExecuteTemplate(w, "index.gohtml", u)
@@ -96,6 +97,19 @@ func signin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tpl.ExecuteTemplate(w, "signin.gohtml", nil)
+}
+
+func logout(w http.ResponseWriter, r *http.Request) {
+	if !hasPersistedSession(r) {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	deleteSession(w)
+	uuid, _ := getSavedSession(r)
+	detachSessionFromUsername(uuid)
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 // seedWithMockUser facilitates login testing by creating an existing user

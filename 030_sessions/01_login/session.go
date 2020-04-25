@@ -4,8 +4,8 @@ import (
 	"net/http"
 )
 
-// hasSessionCookie checks if there is already a session cookie in the request
-func hasSessionCookie(r *http.Request) bool {
+// hasPersistedSession checks if there is already a session cookie in the request
+func hasPersistedSession(r *http.Request) bool {
 	_, err := r.Cookie("session")
 	if err != nil {
 		return false
@@ -30,11 +30,26 @@ func getSavedUser(r *http.Request) user {
 	return u
 }
 
+func getSavedSession(r *http.Request) (string, error) {
+	cookie, err := r.Cookie("session")
+	return cookie.Value, err
+}
+
 // setSessionCookie sets the session cookie to a new uuid value
 func setSessionCookie(w http.ResponseWriter, uuid string) {
 	cookie := &http.Cookie{
 		Name:  "session",
 		Value: uuid,
+	}
+	http.SetCookie(w, cookie)
+}
+
+// deleteSession deletes the session cookie
+func deleteSession(w http.ResponseWriter) {
+	cookie := &http.Cookie{
+		Name:   "session",
+		Value:  "",
+		MaxAge: -1, // expire it
 	}
 	http.SetCookie(w, cookie)
 }
@@ -51,6 +66,11 @@ func getUsernameFromSession(uuid string) string {
 // attachSessionToUsername attaches the session (uuid) to the username
 func attachSessionToUsername(uuid, username string) {
 	dbSessions[uuid] = username
+}
+
+// detachSessionFromUsername dettaches the session (uuid) from the username
+func detachSessionFromUsername(uuid string) {
+	delete(dbSessions, uuid)
 }
 
 // getUser gets the user from the username
